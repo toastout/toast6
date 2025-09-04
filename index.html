@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>💸 토큰 맛보기</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- GPT-4o (o200k_base) Tokenizer -->
+  <script src="https://unpkg.com/gpt-tokenizer/dist/o200k_base.js"></script>
+  <style>
+    :root {
+      --bg-color: #f8f9fa; --text-color: #212529; --border-color: #dee2e6;
+      --section-bg: #ffffff; --btn-bg: #e9ecef; --btn-hover-bg: #dee2e6;
+      --accent-btn-bg: #228be6; --accent-btn-hover-bg: #1c7ed6;
+    }
+    body.dark {
+      --bg-color: #121212; --text-color: #e9ecef; --border-color: #343a40;
+      --section-bg: #1e1e1e; --btn-bg: #343a40; --btn-hover-bg: #495057;
+    }
+    body {
+      font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0; padding: 20px;
+      background-color: var(--bg-color); color: var(--text-color);
+      display: flex; justify-content: center; align-items: flex-start;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    .container {
+      width: 100%;
+      max-width: 900px;
+      background-color: var(--section-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    h1 { text-align: center; margin-top: 0; }
+    .item-list { list-style: none; padding: 0; margin-bottom: 20px; }
+    .item { background-color: var(--bg-color); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    /* ✨ textarea에도 body와 동일한 폰트 적용 */
+    textarea { 
+      width: 100%; 
+      min-height: 120px; 
+      box-sizing: border-box; 
+      padding: 10px; 
+      font-size: 1rem; 
+      border: 1px solid var(--border-color); 
+      border-radius: 6px; 
+      background-color: var(--input-bg, #fff); 
+      color: inherit; 
+      resize: vertical; 
+      margin-bottom: 10px;
+      font-family: inherit; /* 부모 요소의 폰트를 상속받도록 설정 */
+    }
+    .item-header, .item-footer { display: flex; justify-content: space-between; align-items: center; }
+    .item-header { margin-bottom: 10px; }
+    .result-display { display: flex; gap: 15px; flex-wrap: wrap; align-items: center;}
+    .result-item .value { font-weight: 600; }
+    .actions { display: flex; gap: 5px; }
+    .actions button { padding: 5px 8px; line-height: 1; font-size: 1.2rem; background-color: var(--btn-bg); border: none; border-radius: 6px; cursor: pointer; }
+    .total-display { border-top: 2px solid var(--border-color); padding-top: 20px; margin-top: 20px; display: flex; justify-content: flex-end; align-items: center; gap: 20px;}
+    .total-display h3 { margin: 0; }
+    .main-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 20px; }
+    button { border: none; padding: 12px 15px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; background-color: var(--btn-bg); color: var(--text-color); }
+    .toggle-dark-mode { position: fixed; top: 20px; right: 20px; }
+  </style>
+</head>
+<body>
+  <button id="toggleDarkBtn" class="toggle-dark-mode">🌗</button>
+  <div class="container">
+    <h1>💸 토큰 맛보기</h1>
+    <ul id="item-list" class="item-list"></ul>
+    <button id="add-item-btn" style="width: 100%; padding: 15px;">+ 입력창 추가</button>
+
+    <div class="total-display">
+        <h3>총계</h3>
+        <div class="result-display">
+            <div class="result-item"><span class="value" id="total-tokens">0</span> 토큰</div>
+            <div class="result-item"><span class="value" id="total-chars-inc">0</span> 자 (포함)</div>
+            <div class="result-item"><span class="value" id="total-chars-exc">0</span> 자 (제외)</div>
+        </div>
+    </div>
+    
+    <div class="main-controls">
+      <button id="save-btn">💾 저장</button>
+      <button id="load-btn">📂 불러오기</button>
+      <button id="copy-results-btn">📈 결과 복사</button>
+      <input type="file" id="file-input" accept=".txt" style="display: none;">
+    </div>
+  </div>
+
+<script>
+window.addEventListener('load', () => {
+    // --- DOM Elements ---
+    const itemList = document.getElementById('item-list');
+    const fileInput = document.getElementById('file-input');
+
+    // --- Data ---
+    let items = [];
+
+    // --- Functions ---
+    function calculateTokens(text) {
+        try {
+            return window.GPTTokenizer_o200k_base.encode(text).length;
+        } catch (e) { return 0; }
+    }
+
+    function render() {
+        itemList.innerHTML = '';
+        items.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.className = 'item';
+            li.innerHTML = `
+                <div class="item-header">
+                     <div class="actions">
+                        <button data-action="copy" data-index="${index}" title="복사">📋</button>
+                        <button data-action="paste" data-index="${index}" title="붙여넣기">📝</button>
+                        <button data-action="clear" data-index="${index}" title="초기화">🧹</button>
+                    </div>
+                     <div class="actions">
+                        <button data-action="translate-ko-en" data-index="${index}" title="한→영 번역">🇬🇧</button>
+                        <button data-action="translate-en-ko" data-index="${index}" title="영→한 번역">🇰🇷</button>
+                        <button data-action="spell-check" data-index="${index}" title="맞춤법 검사">🔍</button>
+                        <button data-action="delete" data-index="${index}" title="삭제">❌</button>
+                    </div>
+                </div>
+                <textarea data-index="${index}" placeholder="분석할 텍스트를 입력...">${item.text}</textarea>
+                <div class="item-footer">
+                    <div class="result-display">
+                         <div class="actions">
+                            <button data-action="move-up" data-index="${index}" title="위로">🔼</button>
+                            <button data-action="move-down" data-index="${index}" title="아래로">🔽</button>
+                        </div>
+                        <div class="result-item"><span class="value" id="tokens-${index}">0</span> 토큰</div>
+                        <div class="result-item"><span class="value" id="chars-inc-${index}">0</span> 자</div>
+                        <div class="result-item"><span class="value" id="chars-exc-${index}">0</span> 자</div>
+                    </div>
+                </div>
+            `;
+            itemList.appendChild(li);
+        });
+        updateAllCounts();
+        localStorage.setItem('tokenizer_items_v6', JSON.stringify(items));
+    }
+
+    function updateAllCounts() {
+        let total = { tokens: 0, charsInc: 0, charsExc: 0 };
+        items.forEach((item, index) => {
+            const text = item.text;
+            const tokens = calculateTokens(text);
+            const charsInc = text.length;
+            const charsExc = text.replace(/\s/g, '').length;
+
+            document.getElementById(`tokens-${index}`).textContent = tokens.toLocaleString();
+            document.getElementById(`chars-inc-${index}`).textContent = charsInc.toLocaleString();
+            document.getElementById(`chars-exc-${index}`).textContent = charsExc.toLocaleString();
+
+            total.tokens += tokens;
+            total.charsInc += charsInc;
+            total.charsExc += charsExc;
+        });
+        document.getElementById('total-tokens').textContent = total.tokens.toLocaleString();
+        document.getElementById('total-chars-inc').textContent = total.charsInc.toLocaleString();
+        document.getElementById('total-chars-exc').textContent = total.charsExc.toLocaleString();
+    }
+    
+    function showFeedback(btn) {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = `✅`;
+        setTimeout(() => { btn.innerHTML = originalHtml; }, 1000);
+    }
+
+    // --- Event Listeners ---
+    itemList.addEventListener('input', e => {
+        if (e.target.tagName === 'TEXTAREA') {
+            items[e.target.dataset.index].text = e.target.value;
+            updateAllCounts();
+            localStorage.setItem('tokenizer_items_v6', JSON.stringify(items));
+        }
+    });
+
+    itemList.addEventListener('click', async e => {
+        if (e.target.tagName === 'BUTTON') {
+            const action = e.target.dataset.action;
+            const index = parseInt(e.target.dataset.index);
+            const textarea = document.querySelector(`textarea[data-index="${index}"]`);
+            
+            if (action === 'delete') {
+                items.splice(index, 1);
+                if (items.length === 0) items.push({ text: '' }); 
+            }
+            else if (action === 'move-up' && index > 0) [items[index], items[index - 1]] = [items[index - 1], items[index]];
+            else if (action === 'move-down' && index < items.length - 1) [items[index], items[index + 1]] = [items[index + 1], items[index]];
+            else if (action === 'clear') items[index].text = '';
+            else if (action === 'copy' && textarea.value) {
+                await navigator.clipboard.writeText(textarea.value);
+                showFeedback(e.target);
+            } else if (action === 'paste') {
+                const text = await navigator.clipboard.readText();
+                items[index].text += text;
+                showFeedback(e.target);
+            } else if (action === 'translate-ko-en' || action === 'translate-en-ko') {
+                const text = textarea.value;
+                if (!text) return;
+                const sl = action === 'translate-ko-en' ? 'ko' : 'en';
+                const tl = action === 'translate-ko-en' ? 'en' : 'ko';
+                window.open(`https://translate.google.com/?sl=${sl}&tl=${tl}&text=${encodeURIComponent(text)}&op=translate`, '_blank');
+            } else if (action === 'spell-check') {
+                if (!textarea.value) return alert('먼저 검사할 내용을 입력하세요.');
+                await navigator.clipboard.writeText(textarea.value);
+                showFeedback(e.target);
+                alert('내용이 복사되었습니다. 맞춤법 검사기 사이트에 붙여넣으세요.');
+                window.open('https://nara-speller.co.kr/speller', '_blank');
+            }
+            render();
+        }
+    });
+    
+    document.getElementById('add-item-btn').addEventListener('click', () => { items.push({ text: '' }); render(); });
+
+    document.getElementById('save-btn').addEventListener('click', () => {
+        const content = JSON.stringify(items);
+        const blob = new Blob([content], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'token_data.txt';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    });
+
+    document.getElementById('load-btn').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                if (Array.isArray(data) && data.every(item => typeof item.text === 'string')) {
+                    items = data;
+                    render();
+                } else { throw new Error('Invalid file format'); }
+            } catch { alert('올바른 파일이 아닙니다.'); }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    });
+    
+    document.getElementById('copy-results-btn').addEventListener('click', e => {
+        const totalTokens = document.getElementById('total-tokens').textContent;
+        const totalCharsInc = document.getElementById('total-chars-inc').textContent;
+        const totalCharsExc = document.getElementById('total-chars-exc').textContent;
+        const resultText = `총 토큰: ${totalTokens} / 글자(포함): ${totalCharsInc}자 / 글자(제외): ${totalCharsExc}자`;
+        navigator.clipboard.writeText(resultText);
+        showFeedback(e.target);
+    });
+    
+    document.getElementById('toggleDarkBtn').addEventListener('click', () => {
+        document.body.classList.toggle('dark');
+        localStorage.setItem('tokenizer_darkmode_v6', document.body.classList.contains('dark'));
+    });
+
+    // --- Initial Load ---
+    if (localStorage.getItem('tokenizer_darkmode_v6') === 'true') document.body.classList.add('dark');
+    try { 
+        const saved = localStorage.getItem('tokenizer_items_v6');
+        if (saved) items = JSON.parse(saved);
+    } catch { items = []; }
+    if (items.length === 0) items.push({ text: '' });
+    render();
+});
+</script>
+</body>
+</html>
