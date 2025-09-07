@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>💸 토큰 맛보기</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- GPT-4o (o200k_base) Tokenizer -->
   <script src="https://unpkg.com/gpt-tokenizer/dist/o200k_base.js"></script>
   <style>
     :root {
@@ -36,7 +35,6 @@
     h1 { text-align: center; margin-top: 0; }
     .item-list { list-style: none; padding: 0; margin-bottom: 20px; }
     .item { background-color: var(--bg-color); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-    /* ✨ textarea에도 body와 동일한 폰트 적용 */
     textarea { 
       width: 100%; 
       min-height: 120px; 
@@ -49,7 +47,7 @@
       color: inherit; 
       resize: vertical; 
       margin-bottom: 10px;
-      font-family: inherit; /* 부모 요소의 폰트를 상속받도록 설정 */
+      font-family: inherit;
     }
     .item-header, .item-footer { display: flex; justify-content: space-between; align-items: center; }
     .item-header { margin-bottom: 10px; }
@@ -61,11 +59,15 @@
     .total-display h3 { margin: 0; }
     .main-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 20px; }
     button { border: none; padding: 12px 15px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; background-color: var(--btn-bg); color: var(--text-color); }
-    .toggle-dark-mode { position: fixed; top: 20px; right: 20px; }
+    .header-controls { position: fixed; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 100; }
+    .header-controls button { padding: 8px 12px; }
   </style>
 </head>
 <body>
-  <button id="toggleDarkBtn" class="toggle-dark-mode">🌗</button>
+  <div class="header-controls">
+    <button id="main-link" title="돌아가기">🍞️</button>
+    <button id="toggleDarkBtn" title="다크모드">🌗</button>
+  </div>
   <div class="container">
     <h1>💸 토큰 맛보기</h1>
     <ul id="item-list" class="item-list"></ul>
@@ -93,6 +95,8 @@ window.addEventListener('load', () => {
     // --- DOM Elements ---
     const itemList = document.getElementById('item-list');
     const fileInput = document.getElementById('file-input');
+    // ✨ 버그 수정: mainLinkBtn 변수 선언
+    const mainLinkBtn = document.getElementById('main-link');
 
     // --- Data ---
     let items = [];
@@ -257,6 +261,11 @@ window.addEventListener('load', () => {
     document.getElementById('toggleDarkBtn').addEventListener('click', () => {
         document.body.classList.toggle('dark');
         localStorage.setItem('tokenizer_darkmode_v6', document.body.classList.contains('dark'));
+    });
+	
+	
+    mainLinkBtn.addEventListener('click', () => {
+        window.location.href = "https://toastout.github.io/toast/";
     });
 
     // --- Initial Load ---
